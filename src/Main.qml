@@ -8,6 +8,7 @@ ApplicationWindow {
     width: 640
     height: 360
     title: "Silero TTS"
+    property int maxInputLength: 500
 
     Shortcut {
         sequences: ["Ctrl+Return", "Ctrl+Enter"]
@@ -30,6 +31,20 @@ ApplicationWindow {
             Layout.fillHeight: true
             placeholderText: "Напишите текст и нажмите \"Озвучить\""
             wrapMode: TextArea.Wrap
+            maximumLength: window.maxInputLength
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+
+            Item {
+                Layout.fillWidth: true
+            }
+
+            Label {
+                text: "Символов: " + inputText.text.length + " / " + window.maxInputLength
+                    + " (осталось " + Math.max(window.maxInputLength - inputText.text.length, 0) + ")"
+            }
         }
 
         ComboBox {
