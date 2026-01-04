@@ -8,7 +8,7 @@ ApplicationWindow {
     width: 640
     height: 360
     title: "Silero TTS"
-    property int maxInputLength: 500
+    property int maxInputLength: 1000
 
     Shortcut {
         sequences: ["Ctrl+Return", "Ctrl+Enter"]
@@ -31,11 +31,6 @@ ApplicationWindow {
             Layout.fillHeight: true
             placeholderText: "Напишите текст и нажмите \"Озвучить\""
             wrapMode: TextArea.Wrap
-            onTextChanged: {
-                if (text.length > window.maxInputLength) {
-                    text = text.slice(0, window.maxInputLength)
-                }
-            }
         }
 
         RowLayout {
