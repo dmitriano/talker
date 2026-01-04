@@ -119,16 +119,6 @@ class TtsBridge(QtCore.QObject):
                 """
             )
             connection.execute(
-                """
-                CREATE TABLE IF NOT EXISTS phrases (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    text TEXT UNIQUE NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    say_count INTEGER NOT NULL DEFAULT 0
-                )
-                """
-            )
-            connection.execute(
                 "INSERT OR IGNORE INTO categories(name) VALUES (?)",
                 ("Разговор с Банком",),
             )
@@ -137,6 +127,17 @@ class TtsBridge(QtCore.QObject):
                 ("Разговор с Банком",),
             )
             default_category_id = cursor.fetchone()[0]
+            connection.execute(
+                f"""
+                CREATE TABLE IF NOT EXISTS phrases (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    text TEXT UNIQUE NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    say_count INTEGER NOT NULL DEFAULT 0,
+                    category_id INTEGER NOT NULL DEFAULT {default_category_id}
+                )
+                """
+            )
             cursor = connection.execute("PRAGMA table_info(phrases)")
             columns = {row[1] for row in cursor.fetchall()}
             if "say_count" not in columns:
