@@ -41,6 +41,12 @@ ApplicationWindow {
             onActivated: inputText.text = currentText
         }
 
+        Label {
+            text: "Playing..."
+            color: "steelblue"
+            visible: tts.playing
+        }
+
         RowLayout {
             Layout.alignment: Qt.AlignRight
             spacing: 8
