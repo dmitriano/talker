@@ -53,7 +53,7 @@ class TtsBridge(QtCore.QObject):
     def _load_phrases(self) -> None:
         with sqlite3.connect(self._db_path) as connection:
             cursor = connection.execute(
-                "SELECT text FROM phrases ORDER BY created_at DESC, id DESC"
+                "SELECT text FROM phrases ORDER BY text COLLATE NOCASE ASC"
             )
             rows = [row[0] for row in cursor.fetchall()]
         self._phrases_model.setStringList(rows)
