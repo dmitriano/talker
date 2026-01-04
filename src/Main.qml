@@ -36,10 +36,19 @@ ApplicationWindow {
             onActivated: inputText.text = currentText
         }
 
-        Button {
-            text: "Озвучить"
+        RowLayout {
             Layout.alignment: Qt.AlignRight
-            onClicked: tts.say(inputText.text)
+            spacing: 8
+
+            Button {
+                text: "Save"
+                onClicked: tts.save(inputText.text)
+            }
+
+            Button {
+                text: "Озвучить"
+                onClicked: tts.say(inputText.text)
+            }
         }
     }
 }
