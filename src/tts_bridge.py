@@ -44,10 +44,17 @@ class TtsBridge(QtCore.QObject):
                 CREATE TABLE IF NOT EXISTS phrases (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     text TEXT UNIQUE NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    say_count INTEGER NOT NULL DEFAULT 0
                 )
                 """
             )
+            cursor = connection.execute("PRAGMA table_info(phrases)")
+            columns = {row[1] for row in cursor.fetchall()}
+            if "say_count" not in columns:
+                connection.execute(
+                    "ALTER TABLE phrases ADD COLUMN say_count INTEGER NOT NULL DEFAULT 0"
+                )
             connection.commit()
 
     def _load_phrases(self) -> None:
@@ -70,6 +77,14 @@ class TtsBridge(QtCore.QObject):
             )
             connection.commit()
         self._load_phrases()
+
+    def _increment_phrase_count(self, text: str) -> None:
+        with sqlite3.connect(self._db_path) as connection:
+            connection.execute(
+                "UPDATE phrases SET say_count = say_count + 1 WHERE text = ?",
+                (text,),
+            )
+            connection.commit()
 
     def _delete_phrase(self, text: str) -> None:
         with sqlite3.connect(self._db_path) as connection:
@@ -98,6 +113,7 @@ class TtsBridge(QtCore.QObject):
             return
         if self._autosave:
             self._save_phrase(text)
+        self._increment_phrase_count(text)
         if not self.mutex.tryLock():
             return
         task = TtsTask(self.tts_model, text, self.mutex)
