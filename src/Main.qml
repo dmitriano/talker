@@ -31,7 +31,11 @@ ApplicationWindow {
             Layout.fillHeight: true
             placeholderText: "Напишите текст и нажмите \"Озвучить\""
             wrapMode: TextArea.Wrap
-            maximumLength: window.maxInputLength
+            onTextChanged: {
+                if (text.length > window.maxInputLength) {
+                    text = text.slice(0, window.maxInputLength)
+                }
+            }
         }
 
         RowLayout {
