@@ -9,6 +9,11 @@ ApplicationWindow {
     height: 360
     title: "Silero TTS"
 
+    Shortcut {
+        sequences: ["Ctrl+Return", "Ctrl+Enter"]
+        onActivated: tts.say(inputText.text)
+    }
+    
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 16
