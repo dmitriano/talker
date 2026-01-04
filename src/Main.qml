@@ -66,6 +66,30 @@ ApplicationWindow {
             spacing: 8
 
             Label {
+                text: "Скорость"
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            ComboBox {
+                id: speedPicker
+                Layout.fillWidth: true
+                model: ListModel {
+                    ListElement { text: "0.8x"; value: 0.8 }
+                    ListElement { text: "1.0x"; value: 1.0 }
+                    ListElement { text: "1.2x"; value: 1.2 }
+                }
+                textRole: "text"
+                editable: false
+                onActivated: tts.speed = model.get(currentIndex).value
+                Component.onCompleted: currentIndex = find("1.0x")
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Label {
                 text: "Playing..."
                 visible: tts.playing
                 Layout.alignment: Qt.AlignVCenter
@@ -109,6 +133,11 @@ ApplicationWindow {
         target: tts
         function onSpeakerChanged() {
             speakerPicker.currentIndex = speakerPicker.find(tts.speaker)
+        }
+
+        function onSpeedChanged() {
+            var label = Number(tts.speed).toFixed(1) + "x"
+            speedPicker.currentIndex = speedPicker.find(label)
         }
     }
 }
