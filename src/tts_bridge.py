@@ -145,7 +145,7 @@ class TtsBridge(QtCore.QObject):
                 )
             if "category_id" not in columns:
                 connection.execute(
-                    f\"ALTER TABLE phrases ADD COLUMN category_id INTEGER NOT NULL DEFAULT {default_category_id}\"
+                    f"ALTER TABLE phrases ADD COLUMN category_id INTEGER NOT NULL DEFAULT {default_category_id}"
                 )
             connection.execute(
                 "UPDATE phrases SET category_id = ? WHERE category_id IS NULL",
