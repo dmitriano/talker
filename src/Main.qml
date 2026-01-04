@@ -57,6 +57,12 @@ ApplicationWindow {
             }
 
             Button {
+                text: "Удалить"
+                enabled: phrasePicker.currentText.length > 0
+                onClicked: tts.removePhrase(phrasePicker.currentText)
+            }
+
+            Button {
                 text: "Озвучить"
                 onClicked: tts.say(inputText.text)
             }

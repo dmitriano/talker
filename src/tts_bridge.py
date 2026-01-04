@@ -71,12 +71,25 @@ class TtsBridge(QtCore.QObject):
             connection.commit()
         self._load_phrases()
 
+    def _delete_phrase(self, text: str) -> None:
+        with sqlite3.connect(self._db_path) as connection:
+            connection.execute("DELETE FROM phrases WHERE text = ?", (text,))
+            connection.commit()
+        self._load_phrases()
+
     @QtCore.Slot(str)
     def save(self, text: str) -> None:
         text = text.strip()
         if not text:
             return
         self._save_phrase(text)
+
+    @QtCore.Slot(str)
+    def removePhrase(self, text: str) -> None:
+        text = text.strip()
+        if not text:
+            return
+        self._delete_phrase(text)
 
     @QtCore.Slot(str)
     def say(self, text: str) -> None:
