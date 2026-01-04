@@ -7,9 +7,12 @@ SPEAKER = "aidar"  # мужской
 SAMPLE_RATE = 48000  # 24000/48000 зависит от модели, 48000 обычно ок
 
 
-class TtsTask(QtCore.QRunnable):
+class TtsTask(QtCore.QObject, QtCore.QRunnable):
+    finished = QtCore.Signal()
+
     def __init__(self, tts_model: torch.nn.Module, text: str, mutex: QtCore.QMutex) -> None:
-        super().__init__()
+        QtCore.QObject.__init__(self)
+        QtCore.QRunnable.__init__(self)
         self.tts_model = tts_model
         self.text = text
         self.mutex = mutex
@@ -26,3 +29,4 @@ class TtsTask(QtCore.QRunnable):
             sd.wait()
         finally:
             self.mutex.unlock()
+            self.finished.emit()

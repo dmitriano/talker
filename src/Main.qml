@@ -42,8 +42,18 @@ ApplicationWindow {
         }
 
         RowLayout {
-            Layout.alignment: Qt.AlignRight
+            Layout.fillWidth: true
             spacing: 8
+
+            Label {
+                text: "Playing..."
+                visible: tts.playing
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            Item {
+                Layout.fillWidth: true
+            }
 
             CheckBox {
                 text: "Autosave"
