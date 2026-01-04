@@ -31,6 +31,10 @@ class TtsTask(QtCore.QObject, QtCore.QRunnable):
                 sample_rate=SAMPLE_RATE,
             )
             audio = audio.numpy().astype(np.float32)
+            # Appended a short silence tail to generated TTS audio to reduce clipped final letters.
+            if audio.size:
+                tail_silence = np.zeros(int(SAMPLE_RATE * 0.05), dtype=np.float32)
+                audio = np.concatenate([audio, tail_silence])
             sd.play(audio, SAMPLE_RATE)
             sd.wait()
         finally:
