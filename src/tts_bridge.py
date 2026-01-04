@@ -10,6 +10,7 @@ from tts_task import TtsTask
 class TtsBridge(QtCore.QObject):
     autosaveChanged = QtCore.Signal()
     playingChanged = QtCore.Signal()
+    speakerChanged = QtCore.Signal()
 
     def __init__(self, tts_model: torch.nn.Module) -> None:
         super().__init__()
@@ -22,12 +23,19 @@ class TtsBridge(QtCore.QObject):
         self._current_task: TtsTask | None = None
         self._db_path = Path(__file__).resolve().parent / "phrases.sqlite3"
         self._phrases_model = QtCore.QStringListModel()
+        self._speakers_model = QtCore.QStringListModel()
+        self._speaker = ""
         self._init_db()
         self._load_phrases()
+        self._load_speakers()
 
     @QtCore.Property(QtCore.QObject, constant=True)
     def phrasesModel(self) -> QtCore.QObject:
         return self._phrases_model
+
+    @QtCore.Property(QtCore.QObject, constant=True)
+    def speakersModel(self) -> QtCore.QObject:
+        return self._speakers_model
 
     @QtCore.Property(bool, notify=autosaveChanged)
     def autosave(self) -> bool:
@@ -43,6 +51,18 @@ class TtsBridge(QtCore.QObject):
     @QtCore.Property(bool, notify=playingChanged)
     def playing(self) -> bool:
         return self._playing
+
+    @QtCore.Property(str, notify=speakerChanged)
+    def speaker(self) -> str:
+        return self._speaker
+
+    @speaker.setter
+    def speaker(self, value: str) -> None:
+        value = value.strip()
+        if not value or self._speaker == value:
+            return
+        self._speaker = value
+        self.speakerChanged.emit()
 
     def _set_playing(self, value: bool) -> None:
         if self._playing == value:
@@ -77,6 +97,14 @@ class TtsBridge(QtCore.QObject):
             )
             rows = [row[0] for row in cursor.fetchall()]
         self._phrases_model.setStringList(rows)
+
+    def _load_speakers(self) -> None:
+        speakers = list(getattr(self.tts_model, "speakers", []))
+        speakers = sorted(speakers)
+        self._speakers_model.setStringList(speakers)
+        if not self._speaker and speakers:
+            default_speaker = "aidar" if "aidar" in speakers else speakers[0]
+            self._speaker = default_speaker
 
     def _save_phrase(self, text: str) -> None:
         with sqlite3.connect(self._db_path) as connection:
@@ -130,7 +158,7 @@ class TtsBridge(QtCore.QObject):
         if not self.mutex.tryLock():
             return
         self._set_playing(True)
-        task = TtsTask(self.tts_model, text, self.mutex)
+        task = TtsTask(self.tts_model, text, self._speaker, self.mutex)
         task.finished.connect(self._on_task_finished)
         self._current_task = task
         self.pool.start(task)

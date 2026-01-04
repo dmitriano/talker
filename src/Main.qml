@@ -46,6 +46,26 @@ ApplicationWindow {
             spacing: 8
 
             Label {
+                text: "Голос"
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            ComboBox {
+                id: speakerPicker
+                Layout.fillWidth: true
+                model: tts.speakersModel
+                textRole: "display"
+                editable: false
+                onActivated: tts.speaker = currentText
+                Component.onCompleted: currentIndex = find(tts.speaker)
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Label {
                 text: "Playing..."
                 visible: tts.playing
                 Layout.alignment: Qt.AlignVCenter
@@ -82,6 +102,13 @@ ApplicationWindow {
                 text: "Озвучить"
                 onClicked: tts.say(inputText.text)
             }
+        }
+    }
+
+    Connections {
+        target: tts
+        function onSpeakerChanged() {
+            speakerPicker.currentIndex = speakerPicker.find(tts.speaker)
         }
     }
 }
