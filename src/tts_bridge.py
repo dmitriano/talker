@@ -11,6 +11,7 @@ class TtsBridge(QtCore.QObject):
     autosaveChanged = QtCore.Signal()
     playingChanged = QtCore.Signal()
     speakerChanged = QtCore.Signal()
+    speedChanged = QtCore.Signal()
 
     def __init__(self, tts_model: torch.nn.Module) -> None:
         super().__init__()
@@ -25,6 +26,7 @@ class TtsBridge(QtCore.QObject):
         self._phrases_model = QtCore.QStringListModel()
         self._speakers_model = QtCore.QStringListModel()
         self._speaker = ""
+        self._speed = 1.0
         self._init_db()
         self._load_phrases()
         self._load_speakers()
@@ -63,6 +65,17 @@ class TtsBridge(QtCore.QObject):
             return
         self._speaker = value
         self.speakerChanged.emit()
+
+    @QtCore.Property(float, notify=speedChanged)
+    def speed(self) -> float:
+        return self._speed
+
+    @speed.setter
+    def speed(self, value: float) -> None:
+        if value <= 0 or self._speed == value:
+            return
+        self._speed = value
+        self.speedChanged.emit()
 
     def _set_playing(self, value: bool) -> None:
         if self._playing == value:
@@ -158,7 +171,7 @@ class TtsBridge(QtCore.QObject):
         if not self.mutex.tryLock():
             return
         self._set_playing(True)
-        task = TtsTask(self.tts_model, text, self._speaker, self.mutex)
+        task = TtsTask(self.tts_model, text, self._speaker, self._speed, self.mutex)
         task.finished.connect(self._on_task_finished)
         self._current_task = task
         self.pool.start(task)
