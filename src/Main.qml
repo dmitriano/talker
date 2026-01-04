@@ -45,6 +45,12 @@ ApplicationWindow {
             Layout.alignment: Qt.AlignRight
             spacing: 8
 
+            CheckBox {
+                text: "Autosave"
+                checked: tts.autosave
+                onToggled: tts.autosave = checked
+            }
+
             Button {
                 text: "Save"
                 onClicked: tts.save(inputText.text)

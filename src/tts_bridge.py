@@ -8,12 +8,15 @@ from tts_task import TtsTask
 
 
 class TtsBridge(QtCore.QObject):
+    autosaveChanged = QtCore.Signal()
+
     def __init__(self, tts_model: torch.nn.Module) -> None:
         super().__init__()
         self.tts_model = tts_model
         self.pool = QtCore.QThreadPool.globalInstance()
         self.pool.setMaxThreadCount(1)
         self.mutex = QtCore.QMutex()
+        self._autosave = False
         self._db_path = Path(__file__).resolve().parent / "phrases.sqlite3"
         self._phrases_model = QtCore.QStringListModel()
         self._init_db()
@@ -22,6 +25,17 @@ class TtsBridge(QtCore.QObject):
     @QtCore.Property(QtCore.QObject, constant=True)
     def phrasesModel(self) -> QtCore.QObject:
         return self._phrases_model
+
+    @QtCore.Property(bool, notify=autosaveChanged)
+    def autosave(self) -> bool:
+        return self._autosave
+
+    @autosave.setter
+    def autosave(self, value: bool) -> None:
+        if self._autosave == value:
+            return
+        self._autosave = value
+        self.autosaveChanged.emit()
 
     def _init_db(self) -> None:
         with sqlite3.connect(self._db_path) as connection:
@@ -69,7 +83,8 @@ class TtsBridge(QtCore.QObject):
         text = text.strip()
         if not text:
             return
-        self._save_phrase(text)
+        if self._autosave:
+            self._save_phrase(text)
         if not self.mutex.tryLock():
             return
         task = TtsTask(self.tts_model, text, self.mutex)
