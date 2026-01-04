@@ -27,6 +27,15 @@ ApplicationWindow {
             wrapMode: TextArea.Wrap
         }
 
+        ComboBox {
+            id: phrasePicker
+            Layout.fillWidth: true
+            model: tts.phrasesModel
+            textRole: "display"
+            editable: false
+            onActivated: inputText.text = currentText
+        }
+
         Button {
             text: "Озвучить"
             Layout.alignment: Qt.AlignRight
