@@ -51,6 +51,12 @@ ApplicationWindow {
                 onToggled: tts.autosave = checked
             }
 
+            CheckBox {
+                id: editModeToggle
+                text: "Edit Mode"
+                checked: false
+            }
+            
             Button {
                 text: "Save"
                 onClicked: tts.save(inputText.text)
@@ -58,7 +64,7 @@ ApplicationWindow {
 
             Button {
                 text: "Удалить"
-                enabled: phrasePicker.currentText.length > 0
+                enabled: editModeToggle.checked && phrasePicker.currentText.length > 0
                 onClicked: tts.removePhrase(phrasePicker.currentText)
             }
 
