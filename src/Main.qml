@@ -46,6 +46,37 @@ ApplicationWindow {
             spacing: 8
 
             Label {
+                text: "Категория"
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            ComboBox {
+                id: categoryPicker
+                Layout.fillWidth: true
+                model: tts.categoriesModel
+                textRole: "display"
+                editable: false
+                onActivated: tts.setCurrentCategory(currentText)
+                Component.onCompleted: currentIndex = find(tts.currentCategory)
+            }
+
+            Button {
+                text: "Добавить"
+                onClicked: addCategoryDialog.open()
+            }
+
+            Button {
+                text: "Удалить"
+                enabled: categoryPicker.currentText.length > 0
+                onClicked: tts.removeCategory(categoryPicker.currentText)
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Label {
                 text: "Голос"
                 Layout.alignment: Qt.AlignVCenter
             }
@@ -138,6 +169,42 @@ ApplicationWindow {
         function onSpeedChanged() {
             var label = Number(tts.speed).toFixed(1) + "x"
             speedPicker.currentIndex = speedPicker.find(label)
+        }
+
+        function onCurrentCategoryChanged() {
+            categoryPicker.currentIndex = categoryPicker.find(tts.currentCategory)
+        }
+
+        function onCategoriesChanged() {
+            categoryPicker.currentIndex = categoryPicker.find(tts.currentCategory)
+        }
+    }
+
+    Dialog {
+        id: addCategoryDialog
+        title: "Новая категория"
+        modal: true
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        closePolicy: Popup.CloseOnEscape
+
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 8
+
+            TextField {
+                id: categoryNameField
+                Layout.fillWidth: true
+                placeholderText: "Введите название категории"
+            }
+        }
+
+        onAccepted: {
+            tts.addCategory(categoryNameField.text)
+            categoryNameField.text = ""
+        }
+
+        onRejected: {
+            categoryNameField.text = ""
         }
     }
 }
