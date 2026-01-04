@@ -25,6 +25,52 @@ ApplicationWindow {
             Layout.fillHeight: true
             placeholderText: "Напишите текст и нажмите \"Озвучить\""
             wrapMode: TextArea.Wrap
+            onTextChanged: {
+                suggestionModel.clear()
+                const query = text.trim().toLowerCase()
+                if (!query) {
+                    return
+                }
+                for (let i = 0; i < tts.phrasesModel.count; i += 1) {
+                    const item = tts.phrasesModel.get(i)
+                    const phrase = item.display || ""
+                    if (phrase.toLowerCase().indexOf(query) !== -1) {
+                        suggestionModel.append({ display: phrase })
+                    }
+                }
+            }
+        }
+
+        Popup {
+            id: suggestionPopup
+            x: inputText.x
+            y: inputText.y + inputText.height + 4
+            width: inputText.width
+            modal: false
+            focus: false
+            closePolicy: Popup.CloseOnPressOutside
+            visible: inputText.activeFocus && suggestionModel.count > 0
+
+            ListView {
+                id: suggestionList
+                width: parent.width
+                height: Math.min(contentHeight, 160)
+                model: suggestionModel
+                clip: true
+                delegate: ItemDelegate {
+                    width: ListView.view.width
+                    text: model.display
+                    onClicked: {
+                        inputText.text = model.display
+                        suggestionPopup.close()
+                        inputText.forceActiveFocus()
+                    }
+                }
+            }
+        }
+
+        ListModel {
+            id: suggestionModel
         }
 
         ComboBox {
