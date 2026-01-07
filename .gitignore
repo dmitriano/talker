@@ -208,3 +208,5 @@ __marimo__/
 
 src/phrases.sqlite3
 src/recordings
+src/.vscode/
+

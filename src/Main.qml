@@ -137,6 +137,7 @@ ApplicationWindow {
             Label {
                 text: "Playing..."
                 visible: tts.playing
+                color: "blue"
                 Layout.alignment: Qt.AlignVCenter
             }
 
