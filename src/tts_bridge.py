@@ -1,9 +1,11 @@
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 import torch
 from PySide6 import QtCore
 
+from tts_save_task import TtsSaveTask
 from tts_task import TtsTask
 
 
@@ -12,6 +14,7 @@ class TtsBridge(QtCore.QObject):
     categoriesChanged = QtCore.Signal()
     currentCategoryChanged = QtCore.Signal()
     playingChanged = QtCore.Signal()
+    savingChanged = QtCore.Signal()
     speakerChanged = QtCore.Signal()
     speedChanged = QtCore.Signal()
 
@@ -24,6 +27,8 @@ class TtsBridge(QtCore.QObject):
         self._autosave = False
         self._playing = False
         self._current_task: TtsTask | None = None
+        self._saving = False
+        self._current_save_task: TtsSaveTask | None = None
         self._db_path = Path(__file__).resolve().parent / "phrases.sqlite3"
         self._phrases_model = QtCore.QStringListModel()
         self._categories_model = QtCore.QStringListModel()
@@ -63,6 +68,10 @@ class TtsBridge(QtCore.QObject):
     @QtCore.Property(bool, notify=playingChanged)
     def playing(self) -> bool:
         return self._playing
+
+    @QtCore.Property(bool, notify=savingChanged)
+    def saving(self) -> bool:
+        return self._saving
 
     @QtCore.Property(str, notify=currentCategoryChanged)
     def currentCategory(self) -> str:
@@ -107,6 +116,17 @@ class TtsBridge(QtCore.QObject):
             return
         self._playing = value
         self.playingChanged.emit()
+
+    def _set_saving(self, value: bool) -> None:
+        if self._saving == value:
+            return
+        self._saving = value
+        self.savingChanged.emit()
+
+    def _next_audio_path(self) -> Path:
+        base_dir = Path(__file__).resolve().parent / "recordings"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return base_dir / f"tts_{timestamp}.wav"
 
     def _init_db(self) -> None:
         with sqlite3.connect(self._db_path) as connection:
@@ -310,7 +330,42 @@ class TtsBridge(QtCore.QObject):
         self._current_task = task
         self.pool.start(task)
 
+    @QtCore.Slot(str)
+    def saveAudio(self, text: str) -> None:
+        text = text.strip()
+        if not text:
+            return
+        if self._autosave:
+            self._save_phrase(text)
+        self._increment_phrase_count(text)
+        if not self.mutex.tryLock():
+            return
+        output_path = self._next_audio_path()
+        self._set_saving(True)
+        task = TtsSaveTask(
+            self.tts_model,
+            text,
+            self._speaker,
+            self._speed,
+            output_path,
+            self.mutex,
+        )
+        task.finished.connect(self._on_save_finished)
+        task.failed.connect(self._on_save_failed)
+        self._current_save_task = task
+        self.pool.start(task)
+
     @QtCore.Slot()
     def _on_task_finished(self) -> None:
         self._set_playing(False)
         self._current_task = None
+
+    @QtCore.Slot(str)
+    def _on_save_finished(self, _: str) -> None:
+        self._set_saving(False)
+        self._current_save_task = None
+
+    @QtCore.Slot(str)
+    def _on_save_failed(self, _: str) -> None:
+        self._set_saving(False)
+        self._current_save_task = None

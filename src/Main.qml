@@ -140,6 +140,12 @@ ApplicationWindow {
                 Layout.alignment: Qt.AlignVCenter
             }
 
+            Label {
+                text: "Сохранение..."
+                visible: tts.saving
+                Layout.alignment: Qt.AlignVCenter
+            }
+
             Item {
                 Layout.fillWidth: true
             }
@@ -170,6 +176,11 @@ ApplicationWindow {
             Button {
                 text: "Озвучить"
                 onClicked: tts.say(inputText.text)
+            }
+
+            Button {
+                text: "В файл"
+                onClicked: tts.saveAudio(inputText.text)
             }
         }
     }
