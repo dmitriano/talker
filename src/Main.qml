@@ -7,7 +7,7 @@ ApplicationWindow {
     visible: true
     width: 640
     height: 360
-    title: "Silero TTS"
+    title: "Говорилка"
     property int maxInputLength: 1000
 
     Shortcut {
