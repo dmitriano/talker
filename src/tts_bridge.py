@@ -1,9 +1,12 @@
 import sqlite3
+import threading
+from datetime import datetime
 from pathlib import Path
 
 import torch
 from PySide6 import QtCore
 
+from record_task import RecordingTask
 from tts_task import TtsTask
 
 
@@ -12,6 +15,7 @@ class TtsBridge(QtCore.QObject):
     categoriesChanged = QtCore.Signal()
     currentCategoryChanged = QtCore.Signal()
     playingChanged = QtCore.Signal()
+    recordingChanged = QtCore.Signal()
     speakerChanged = QtCore.Signal()
     speedChanged = QtCore.Signal()
 
@@ -24,6 +28,9 @@ class TtsBridge(QtCore.QObject):
         self._autosave = False
         self._playing = False
         self._current_task: TtsTask | None = None
+        self._recording = False
+        self._recording_task: RecordingTask | None = None
+        self._recording_stop_event: threading.Event | None = None
         self._db_path = Path(__file__).resolve().parent / "phrases.sqlite3"
         self._phrases_model = QtCore.QStringListModel()
         self._categories_model = QtCore.QStringListModel()
@@ -63,6 +70,10 @@ class TtsBridge(QtCore.QObject):
     @QtCore.Property(bool, notify=playingChanged)
     def playing(self) -> bool:
         return self._playing
+
+    @QtCore.Property(bool, notify=recordingChanged)
+    def recording(self) -> bool:
+        return self._recording
 
     @QtCore.Property(str, notify=currentCategoryChanged)
     def currentCategory(self) -> str:
@@ -107,6 +118,17 @@ class TtsBridge(QtCore.QObject):
             return
         self._playing = value
         self.playingChanged.emit()
+
+    def _set_recording(self, value: bool) -> None:
+        if self._recording == value:
+            return
+        self._recording = value
+        self.recordingChanged.emit()
+
+    def _next_recording_path(self) -> Path:
+        base_dir = Path(__file__).resolve().parent / "recordings"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return base_dir / f"recording_{timestamp}.wav"
 
     def _init_db(self) -> None:
         with sqlite3.connect(self._db_path) as connection:
@@ -311,6 +333,45 @@ class TtsBridge(QtCore.QObject):
         self.pool.start(task)
 
     @QtCore.Slot()
+    def toggleRecording(self) -> None:
+        if self._recording:
+            self._stop_recording()
+        else:
+            self._start_recording()
+
+    def _start_recording(self) -> None:
+        if self._recording_task is not None:
+            return
+        if not self.mutex.tryLock():
+            return
+        output_path = self._next_recording_path()
+        stop_event = threading.Event()
+        task = RecordingTask(output_path, self.mutex, stop_event)
+        task.finished.connect(self._on_recording_finished)
+        task.failed.connect(self._on_recording_failed)
+        self._recording_task = task
+        self._recording_stop_event = stop_event
+        self._set_recording(True)
+        self.pool.start(task)
+
+    def _stop_recording(self) -> None:
+        if not self._recording_stop_event:
+            return
+        self._recording_stop_event.set()
+
+    @QtCore.Slot()
     def _on_task_finished(self) -> None:
         self._set_playing(False)
         self._current_task = None
+
+    @QtCore.Slot(str)
+    def _on_recording_finished(self, _: str) -> None:
+        self._set_recording(False)
+        self._recording_task = None
+        self._recording_stop_event = None
+
+    @QtCore.Slot(str)
+    def _on_recording_failed(self, _: str) -> None:
+        self._set_recording(False)
+        self._recording_task = None
+        self._recording_stop_event = None

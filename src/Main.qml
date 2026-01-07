@@ -140,6 +140,12 @@ ApplicationWindow {
                 Layout.alignment: Qt.AlignVCenter
             }
 
+            Label {
+                text: "Запись..."
+                visible: tts.recording
+                Layout.alignment: Qt.AlignVCenter
+            }
+
             Item {
                 Layout.fillWidth: true
             }
@@ -159,6 +165,11 @@ ApplicationWindow {
             Button {
                 text: "Save"
                 onClicked: tts.save(inputText.text)
+            }
+
+            Button {
+                text: tts.recording ? "Стоп" : "Запись"
+                onClicked: tts.toggleRecording()
             }
 
             Button {
