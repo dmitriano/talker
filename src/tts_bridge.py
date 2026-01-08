@@ -5,6 +5,7 @@ from pathlib import Path
 import torch
 from PySide6 import QtCore
 
+from number_normalizer import NumberNormalizer
 from tts_save_task import TtsSaveTask
 from tts_task import TtsTask
 
@@ -32,6 +33,7 @@ class TtsBridge(QtCore.QObject):
         self._saving = False
         self._current_save_task: TtsSaveTask | None = None
         self._db_path = Path(__file__).resolve().parent / "phrases.sqlite3"
+        self._number_normalizer = NumberNormalizer()
         self._phrases_model = QtCore.QStringListModel()
         self._categories_model = QtCore.QStringListModel()
         self._speakers_model = QtCore.QStringListModel()
@@ -298,6 +300,9 @@ class TtsBridge(QtCore.QObject):
         self._load_categories()
         self._load_phrases()
 
+    def _normalize_text(self, text: str) -> str:
+        return self._number_normalizer.normalize(text)
+
     @QtCore.Slot(str)
     def save(self, text: str) -> None:
         text = text.strip()
@@ -331,6 +336,7 @@ class TtsBridge(QtCore.QObject):
         text = text.strip()
         if not text:
             return
+        spoken_text = self._normalize_text(text)
         if self._autosave:
             self._save_phrase(text)
         self._increment_phrase_count(text)
@@ -338,7 +344,9 @@ class TtsBridge(QtCore.QObject):
             return
         self._set_preparing(True)
         self._set_playing(False)
-        task = TtsTask(self.tts_model, text, self._speaker, self._speed, self.mutex)
+        task = TtsTask(
+            self.tts_model, spoken_text, self._speaker, self._speed, self.mutex
+        )
         task.ready.connect(self._on_task_ready)
         task.finished.connect(self._on_task_finished)
         self._current_task = task
@@ -349,6 +357,7 @@ class TtsBridge(QtCore.QObject):
         text = text.strip()
         if not text:
             return
+        spoken_text = self._normalize_text(text)
         if self._autosave:
             self._save_phrase(text)
         self._increment_phrase_count(text)
@@ -358,7 +367,7 @@ class TtsBridge(QtCore.QObject):
         self._set_saving(True)
         task = TtsSaveTask(
             self.tts_model,
-            text,
+            spoken_text,
             self._speaker,
             self._speed,
             output_path,
