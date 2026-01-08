@@ -8,6 +8,7 @@ SAMPLE_RATE = 48000  # 24000/48000 зависит от модели, 48000 об�
 
 
 class TtsTask(QtCore.QObject, QtCore.QRunnable):
+    ready = QtCore.Signal()
     finished = QtCore.Signal()
 
     def __init__(
@@ -45,6 +46,7 @@ class TtsTask(QtCore.QObject, QtCore.QRunnable):
             sample_rate = SAMPLE_RATE
             if "speed" not in kwargs and self.speed != 1.0:
                 sample_rate = int(SAMPLE_RATE * self.speed)
+            self.ready.emit()
             sd.play(audio, sample_rate)
             sd.wait()
         finally:

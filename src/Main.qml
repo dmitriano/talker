@@ -9,6 +9,7 @@ ApplicationWindow {
     height: 360
     title: "Говорилка"
     property int maxInputLength: 1000
+    property color statusColor: "blue"
 
     Shortcut {
         sequences: ["Ctrl+Return", "Ctrl+Enter"]
@@ -135,9 +136,16 @@ ApplicationWindow {
             spacing: 8
 
             Label {
+                text: "Preparing..."
+                visible: tts.preparing
+                color: window.statusColor
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            Label {
                 text: "Playing..."
                 visible: tts.playing
-                color: "blue"
+                color: window.statusColor
                 Layout.alignment: Qt.AlignVCenter
             }
 

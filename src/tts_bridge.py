@@ -14,6 +14,7 @@ class TtsBridge(QtCore.QObject):
     categoriesChanged = QtCore.Signal()
     currentCategoryChanged = QtCore.Signal()
     playingChanged = QtCore.Signal()
+    preparingChanged = QtCore.Signal()
     savingChanged = QtCore.Signal()
     speakerChanged = QtCore.Signal()
     speedChanged = QtCore.Signal()
@@ -26,6 +27,7 @@ class TtsBridge(QtCore.QObject):
         self.mutex = QtCore.QMutex()
         self._autosave = False
         self._playing = False
+        self._preparing = False
         self._current_task: TtsTask | None = None
         self._saving = False
         self._current_save_task: TtsSaveTask | None = None
@@ -68,6 +70,10 @@ class TtsBridge(QtCore.QObject):
     @QtCore.Property(bool, notify=playingChanged)
     def playing(self) -> bool:
         return self._playing
+
+    @QtCore.Property(bool, notify=preparingChanged)
+    def preparing(self) -> bool:
+        return self._preparing
 
     @QtCore.Property(bool, notify=savingChanged)
     def saving(self) -> bool:
@@ -116,6 +122,12 @@ class TtsBridge(QtCore.QObject):
             return
         self._playing = value
         self.playingChanged.emit()
+
+    def _set_preparing(self, value: bool) -> None:
+        if self._preparing == value:
+            return
+        self._preparing = value
+        self.preparingChanged.emit()
 
     def _set_saving(self, value: bool) -> None:
         if self._saving == value:
@@ -324,8 +336,10 @@ class TtsBridge(QtCore.QObject):
         self._increment_phrase_count(text)
         if not self.mutex.tryLock():
             return
-        self._set_playing(True)
+        self._set_preparing(True)
+        self._set_playing(False)
         task = TtsTask(self.tts_model, text, self._speaker, self._speed, self.mutex)
+        task.ready.connect(self._on_task_ready)
         task.finished.connect(self._on_task_finished)
         self._current_task = task
         self.pool.start(task)
@@ -358,7 +372,13 @@ class TtsBridge(QtCore.QObject):
     @QtCore.Slot()
     def _on_task_finished(self) -> None:
         self._set_playing(False)
+        self._set_preparing(False)
         self._current_task = None
+
+    @QtCore.Slot()
+    def _on_task_ready(self) -> None:
+        self._set_preparing(False)
+        self._set_playing(True)
 
     @QtCore.Slot(str)
     def _on_save_finished(self, _: str) -> None:
