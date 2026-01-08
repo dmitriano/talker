@@ -5,11 +5,12 @@ import QtQuick.Layouts
 ApplicationWindow {
     id: window
     visible: true
-    width: 640
-    height: 360
+    width: 860
+    height: 520
     title: "Говорилка"
     property int maxInputLength: 1000
     property color statusColor: "blue"
+    property string selectedFavorite: ""
 
     Shortcut {
         sequences: ["Ctrl+Return", "Ctrl+Enter"]
@@ -54,6 +55,59 @@ ApplicationWindow {
             textRole: "display"
             editable: false
             onActivated: inputText.text = currentText
+        }
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 6
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Label {
+                    text: "Избранное"
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                Button {
+                    text: "В избранное"
+                    enabled: inputText.text.length > 0
+                    onClicked: tts.addFavorite(inputText.text)
+                }
+
+                Button {
+                    text: "Удалить из избранного"
+                    enabled: window.selectedFavorite.length > 0
+                    onClicked: {
+                        tts.removeFavorite(window.selectedFavorite)
+                        window.selectedFavorite = ""
+                    }
+                }
+            }
+
+            ListView {
+                id: favoritesList
+                Layout.fillWidth: true
+                Layout.preferredHeight: 110
+                clip: true
+                model: tts.favoritesModel
+
+                delegate: ItemDelegate {
+                    width: favoritesList.width
+                    text: model.display
+                    highlighted: ListView.isCurrentItem
+                    onClicked: {
+                        favoritesList.currentIndex = index
+                        window.selectedFavorite = model.display
+                        inputText.text = model.display
+                    }
+                }
+            }
         }
 
         RowLayout {

@@ -37,6 +37,7 @@ class TtsBridge(QtCore.QObject):
         self._latin_transliterator = LatinTransliterator()
         self._number_normalizer = NumberNormalizer()
         self._phrases_model = QtCore.QStringListModel()
+        self._favorites_model = QtCore.QStringListModel()
         self._categories_model = QtCore.QStringListModel()
         self._speakers_model = QtCore.QStringListModel()
         self._speaker = ""
@@ -46,11 +47,16 @@ class TtsBridge(QtCore.QObject):
         self._init_db()
         self._load_categories()
         self._load_phrases()
+        self._load_favorites()
         self._load_speakers()
 
     @QtCore.Property(QtCore.QObject, constant=True)
     def phrasesModel(self) -> QtCore.QObject:
         return self._phrases_model
+
+    @QtCore.Property(QtCore.QObject, constant=True)
+    def favoritesModel(self) -> QtCore.QObject:
+        return self._favorites_model
 
     @QtCore.Property(QtCore.QObject, constant=True)
     def categoriesModel(self) -> QtCore.QObject:
@@ -170,7 +176,8 @@ class TtsBridge(QtCore.QObject):
                     text TEXT UNIQUE NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     say_count INTEGER NOT NULL DEFAULT 0,
-                    category_id INTEGER NOT NULL DEFAULT {default_category_id}
+                    category_id INTEGER NOT NULL DEFAULT {default_category_id},
+                    is_favorite INTEGER NOT NULL DEFAULT 0
                 )
                 """
             )
@@ -183,6 +190,10 @@ class TtsBridge(QtCore.QObject):
             if "category_id" not in columns:
                 connection.execute(
                     f"ALTER TABLE phrases ADD COLUMN category_id INTEGER NOT NULL DEFAULT {default_category_id}"
+                )
+            if "is_favorite" not in columns:
+                connection.execute(
+                    "ALTER TABLE phrases ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0"
                 )
             connection.execute(
                 "UPDATE phrases SET category_id = ? WHERE category_id IS NULL",
@@ -207,6 +218,19 @@ class TtsBridge(QtCore.QObject):
             )
             rows = [row[0] for row in cursor.fetchall()]
         self._phrases_model.setStringList(rows)
+
+    def _load_favorites(self) -> None:
+        with sqlite3.connect(self._db_path) as connection:
+            cursor = connection.execute(
+                """
+                SELECT text
+                FROM phrases
+                WHERE is_favorite = 1
+                ORDER BY text COLLATE NOCASE ASC
+                """
+            )
+            rows = [row[0] for row in cursor.fetchall()]
+        self._favorites_model.setStringList(rows)
 
     def _load_categories(self) -> None:
         with sqlite3.connect(self._db_path) as connection:
@@ -271,6 +295,34 @@ class TtsBridge(QtCore.QObject):
             connection.execute("DELETE FROM phrases WHERE text = ?", (text,))
             connection.commit()
         self._load_phrases()
+        self._load_favorites()
+
+    def _favorite_phrase(self, text: str) -> None:
+        category_id = self._find_category_id(self._current_category)
+        if not category_id:
+            return
+        with sqlite3.connect(self._db_path) as connection:
+            connection.execute(
+                """
+                INSERT INTO phrases(text, created_at, category_id, is_favorite)
+                VALUES(?, CURRENT_TIMESTAMP, ?, 1)
+                ON CONFLICT(text)
+                DO UPDATE SET is_favorite = 1
+                """,
+                (text, category_id),
+            )
+            connection.commit()
+        self._load_phrases()
+        self._load_favorites()
+
+    def _unfavorite_phrase(self, text: str) -> None:
+        with sqlite3.connect(self._db_path) as connection:
+            connection.execute(
+                "UPDATE phrases SET is_favorite = 0 WHERE text = ?",
+                (text,),
+            )
+            connection.commit()
+        self._load_favorites()
 
     def _add_category(self, name: str) -> None:
         with sqlite3.connect(self._db_path) as connection:
@@ -319,6 +371,20 @@ class TtsBridge(QtCore.QObject):
         if not text:
             return
         self._delete_phrase(text)
+
+    @QtCore.Slot(str)
+    def addFavorite(self, text: str) -> None:
+        text = text.strip()
+        if not text:
+            return
+        self._favorite_phrase(text)
+
+    @QtCore.Slot(str)
+    def removeFavorite(self, text: str) -> None:
+        text = text.strip()
+        if not text:
+            return
+        self._unfavorite_phrase(text)
 
     @QtCore.Slot(str)
     def addCategory(self, name: str) -> None:
