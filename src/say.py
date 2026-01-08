@@ -21,6 +21,9 @@ model = loaded[0] if isinstance(loaded, (tuple, list)) else loaded
 # 3) Настройки
 def main() -> int:
     app = QtGui.QGuiApplication(sys.argv)
+    icon_path = Path(__file__).resolve().parent / "app_icon.xpm"
+    if icon_path.exists():
+        app.setWindowIcon(QtGui.QIcon(str(icon_path)))
     engine = QtQml.QQmlApplicationEngine()
 
     bridge = TtsBridge(model)
